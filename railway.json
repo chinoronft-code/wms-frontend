@@ -1,1 +1,0 @@
-{"build":{"builder":"NIXPACKS","buildCommand":"npm install && ./node_modules/.bin/react-scripts build"},"deploy":{"startCommand":"./node_modules/.bin/serve -s build -l $PORT"}}

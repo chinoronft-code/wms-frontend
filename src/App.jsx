@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import PackingPage   from './pages/PackingPage';
 import InboundPage   from './pages/InboundPage';
 import RequestsPage  from './pages/RequestsPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import './index.css';
 
 const PrivateRoute = ({ children, roles }) => {
@@ -59,9 +60,14 @@ const SIDEBAR_MAP = {
       { label: 'POS Export',     color: '#188918', path: '/requests' },
     ]},
   ],
+  '/change-password': [
+    { group: 'ตั้งค่า', items: [
+      { label: 'เปลี่ยนรหัสผ่าน', color: '#0070F2', path: '/change-password' },
+    ]},
+  ],
 };
 
-const Layout = ({ children, title, toolbar }) => {
+const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,7 +77,6 @@ const Layout = ({ children, title, toolbar }) => {
 
   return (
     <div className="erp-wrap">
-      {/* Header */}
       <div className="erp-header">
         <div className="logo">▪ WMS Pro — Warehouse Management System</div>
         <div className="nav">
@@ -87,16 +92,12 @@ const Layout = ({ children, title, toolbar }) => {
         </div>
         <div className="user-info">
           <span>{user?.fullName} / {user?.role} &nbsp;|&nbsp; {today}</span>
+          <button className="logout-btn" onClick={() => navigate('/change-password')}>เปลี่ยนรหัส</button>
           <button className="logout-btn" onClick={logout}>ออก</button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      {toolbar && <div className="erp-toolbar">{toolbar}</div>}
-
-      {/* Body */}
       <div className="erp-body">
-        {/* Sidebar */}
         <div className="erp-sidebar">
           {sidebarGroups.map((g, gi) => (
             <div className="sidebar-group" key={gi}>
@@ -114,12 +115,9 @@ const Layout = ({ children, title, toolbar }) => {
             </div>
           ))}
         </div>
-
-        {/* Main */}
         <div className="erp-main">{children}</div>
       </div>
 
-      {/* Footer */}
       <div className="erp-footer">
         <span>WMS Pro v1.0 | User: {user?.fullName}</span>
         <span>
@@ -140,34 +138,11 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={
-              <PrivateRoute>
-                <Layout>
-                  <DashboardPage />
-                </Layout>
-              </PrivateRoute>
-            } />
-            <Route path="/packing" element={
-              <PrivateRoute roles={['packer','admin']}>
-                <Layout>
-                  <PackingPage />
-                </Layout>
-              </PrivateRoute>
-            } />
-            <Route path="/inbound" element={
-              <PrivateRoute roles={['receiver','admin']}>
-                <Layout>
-                  <InboundPage />
-                </Layout>
-              </PrivateRoute>
-            } />
-            <Route path="/requests" element={
-              <PrivateRoute roles={['admin']}>
-                <Layout>
-                  <RequestsPage />
-                </Layout>
-              </PrivateRoute>
-            } />
+            <Route path="/" element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
+            <Route path="/packing" element={<PrivateRoute roles={['packer','admin']}><Layout><PackingPage /></Layout></PrivateRoute>} />
+            <Route path="/inbound" element={<PrivateRoute roles={['receiver','admin']}><Layout><InboundPage /></Layout></PrivateRoute>} />
+            <Route path="/requests" element={<PrivateRoute roles={['admin']}><Layout><RequestsPage /></Layout></PrivateRoute>} />
+            <Route path="/change-password" element={<PrivateRoute><Layout><ChangePasswordPage /></Layout></PrivateRoute>} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>

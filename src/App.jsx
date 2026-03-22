@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/common/Toast';
 import LoginPage     from './pages/LoginPage';
@@ -9,12 +9,6 @@ import InboundPage   from './pages/InboundPage';
 import RequestsPage  from './pages/RequestsPage';
 import './index.css';
 
-// SVG icons inline (no icon lib needed)
-const IconDash  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
-const IconPack  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>;
-const IconIn    = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>;
-const IconReq   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
-
 const PrivateRoute = ({ children, roles }) => {
   const { user, isLoggedIn } = useAuth();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
@@ -22,25 +16,119 @@ const PrivateRoute = ({ children, roles }) => {
   return children;
 };
 
-const Layout = ({ children }) => {
+const NAV_ITEMS = [
+  { path: '/',         label: 'Dashboard',    roles: ['admin','packer','receiver'] },
+  { path: '/packing',  label: 'Packing',      roles: ['admin','packer'] },
+  { path: '/inbound',  label: 'Inbound',      roles: ['admin','receiver'] },
+  { path: '/requests', label: 'POS Document', roles: ['admin'] },
+];
+
+const SIDEBAR_MAP = {
+  '/': [
+    { group: 'ภาพรวม', items: [
+      { label: 'Dashboard', color: '#0070F2', path: '/' },
+    ]},
+  ],
+  '/packing': [
+    { group: 'จัดการ Request', items: [
+      { label: 'Packing List',   color: '#0070F2', path: '/packing' },
+      { label: 'SKU Assignment', color: '#627487', path: '/packing' },
+      { label: 'Scan Barcode',   color: '#E76500', path: '/packing' },
+    ]},
+    { group: 'รับสินค้า', items: [
+      { label: 'Scan Box Barcode', color: '#188918', path: '/inbound' },
+      { label: 'Receiving Log',    color: '#627487', path: '/inbound' },
+      { label: 'Discrepancy',      color: '#627487', path: '/inbound' },
+    ]},
+    { group: 'รายงาน', items: [
+      { label: 'Summary Report', color: '#627487', path: '/' },
+      { label: 'POS Export',     color: '#627487', path: '/requests' },
+    ]},
+  ],
+  '/inbound': [
+    { group: 'รับสินค้า', items: [
+      { label: 'Scan Box Barcode', color: '#0070F2', path: '/inbound' },
+      { label: 'Receiving Log',    color: '#627487', path: '/inbound' },
+      { label: 'Discrepancy',      color: '#B00020', path: '/inbound' },
+    ]},
+  ],
+  '/requests': [
+    { group: 'เอกสาร', items: [
+      { label: 'Import Request', color: '#0070F2', path: '/requests' },
+      { label: 'รายการ Request', color: '#627487', path: '/requests' },
+      { label: 'POS Export',     color: '#188918', path: '/requests' },
+    ]},
+  ],
+};
+
+const Layout = ({ children, title, toolbar }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const sidebarGroups = SIDEBAR_MAP[currentPath] || SIDEBAR_MAP['/'];
+  const today = new Date().toLocaleDateString('th-TH', { day:'2-digit', month:'2-digit', year:'numeric' });
+
   return (
-    <div className="page-wrap">
-      <header className="app-header">
-        <div className="logo">▪ WMS Pro</div>
-        <div className="user">{user?.fullName} · {user?.role}</div>
-        <button onClick={logout} style={{ background:'none', border:'none', color:'rgba(255,255,255,.6)', cursor:'pointer', fontSize:12 }}>ออก</button>
-      </header>
-      <main className="page-body">{children}</main>
-      <nav className="bottom-nav">
-        <NavLink to="/" end>       <IconDash/> Dashboard </NavLink>
-        {(user?.role === 'packer' || user?.role === 'admin') &&
-          <NavLink to="/packing">  <IconPack/> Packing   </NavLink>}
-        {(user?.role === 'receiver' || user?.role === 'admin') &&
-          <NavLink to="/inbound">  <IconIn/>   Inbound   </NavLink>}
-        {user?.role === 'admin' &&
-          <NavLink to="/requests"> <IconReq/>  Requests  </NavLink>}
-      </nav>
+    <div className="erp-wrap">
+      {/* Header */}
+      <div className="erp-header">
+        <div className="logo">▪ WMS Pro — Warehouse Management System</div>
+        <div className="nav">
+          {NAV_ITEMS.filter(n => !n.roles || n.roles.includes(user?.role)).map(n => (
+            <button
+              key={n.path}
+              className={`nav-btn ${currentPath === n.path ? 'active' : ''}`}
+              onClick={() => navigate(n.path)}
+            >
+              {n.label}
+            </button>
+          ))}
+        </div>
+        <div className="user-info">
+          <span>{user?.fullName} / {user?.role} &nbsp;|&nbsp; {today}</span>
+          <button className="logout-btn" onClick={logout}>ออก</button>
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      {toolbar && <div className="erp-toolbar">{toolbar}</div>}
+
+      {/* Body */}
+      <div className="erp-body">
+        {/* Sidebar */}
+        <div className="erp-sidebar">
+          {sidebarGroups.map((g, gi) => (
+            <div className="sidebar-group" key={gi}>
+              <div className="sidebar-title">{g.group}</div>
+              {g.items.map((item, ii) => (
+                <div
+                  key={ii}
+                  className={`sidebar-item ${currentPath === item.path && ii === 0 ? 'active' : ''}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  <span className="sidebar-dot" style={{ background: item.color }}></span>
+                  {item.label}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Main */}
+        <div className="erp-main">{children}</div>
+      </div>
+
+      {/* Footer */}
+      <div className="erp-footer">
+        <span>WMS Pro v1.0 | User: {user?.fullName}</span>
+        <span>
+          <span className="chip">Packing</span>
+          <span className="chip">Inbound</span>
+          <span className="chip">POS Sync</span>
+          <span className="chip">Barcode</span>
+        </span>
+      </div>
     </div>
   );
 };
@@ -52,10 +140,34 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
-            <Route path="/packing" element={<PrivateRoute roles={['packer','admin']}><Layout><PackingPage /></Layout></PrivateRoute>} />
-            <Route path="/inbound" element={<PrivateRoute roles={['receiver','admin']}><Layout><InboundPage /></Layout></PrivateRoute>} />
-            <Route path="/requests" element={<PrivateRoute roles={['admin']}><Layout><RequestsPage /></Layout></PrivateRoute>} />
+            <Route path="/" element={
+              <PrivateRoute>
+                <Layout>
+                  <DashboardPage />
+                </Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/packing" element={
+              <PrivateRoute roles={['packer','admin']}>
+                <Layout>
+                  <PackingPage />
+                </Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/inbound" element={
+              <PrivateRoute roles={['receiver','admin']}>
+                <Layout>
+                  <InboundPage />
+                </Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/requests" element={
+              <PrivateRoute roles={['admin']}>
+                <Layout>
+                  <RequestsPage />
+                </Layout>
+              </PrivateRoute>
+            } />
           </Routes>
         </BrowserRouter>
       </ToastProvider>

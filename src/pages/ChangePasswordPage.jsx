@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/common/Toast';
-import api from '../services/api';
+import axios from 'axios';
+
+const BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
 
 export default function ChangePasswordPage() {
   const toast    = useToast();
   const navigate = useNavigate();
-  const [form, setForm]     = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [form, setForm]       = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
@@ -19,15 +21,17 @@ export default function ChangePasswordPage() {
     }
     setLoading(true);
     try {
-      await api.post('/auth/change-password', {
-        oldPassword: form.oldPassword,
-        newPassword: form.newPassword,
-      });
+      const token = localStorage.getItem('wms_token');
+      await axios.post(
+        `${BASE}/auth/change-password`,
+        { oldPassword: form.oldPassword, newPassword: form.newPassword },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       toast.ok('เปลี่ยนรหัสผ่านสำเร็จ');
       setForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => navigate('/'), 1500);
     } catch (err) {
-      toast.error(err?.error || 'เกิดข้อผิดพลาด');
+      toast.error(err?.response?.data?.error || 'เกิดข้อผิดพลาด');
     } finally {
       setLoading(false);
     }
